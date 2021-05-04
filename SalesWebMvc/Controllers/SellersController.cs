@@ -84,9 +84,13 @@ namespace SalesWebMvc.Controllers
         }
 
         // GET: SellersController/Delete/5
-        public ActionResult Delete(int id)
+        public ActionResult Delete(int? id)
         {
-            var seller = _sellerService.FindSeller(id);
+            if (id == null)
+            {
+                return NotFound();
+            }
+            var seller = _sellerService.FindSeller(id.Value);
             return View(seller);
         }
 
