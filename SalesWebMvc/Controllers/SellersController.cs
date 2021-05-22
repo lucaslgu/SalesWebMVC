@@ -5,6 +5,7 @@ using SalesWebMvc.Models.ViewModels;
 using SalesWebMvc.Services;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -22,23 +23,23 @@ namespace SalesWebMvc.Controllers
         }
 
         // GET: SellersController
-        public ActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            var list = _sellerService.FindAll();
+            var list = await _sellerService.FindAll();
             return View(list);
         }
 
         // GET: SellersController/Details/5
-        public ActionResult Details(int id)
+        public async Task<IActionResult> Details(int id)
         {
-            var seller = _sellerService.FindSeller(id);
+            var seller = await _sellerService.FindSeller(id);
             return View(seller);
         }
 
         // GET: SellersController/Create
-        public ActionResult Create(int id)
+        public async Task<IActionResult> Create(int id)
         {
-            var departments = _departmentService.FindAll();
+            var departments = await _departmentService.FindAll();
             var viewModel = new SellerFormViewModel(departments);
 
             return View(viewModel);
@@ -47,67 +48,112 @@ namespace SalesWebMvc.Controllers
         // POST: SellersController/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Create(Seller seller)
+        public async Task<IActionResult> Create(Seller seller)
         {
             try
             {
-                _sellerService.CreateSeller(seller);
+                if(!ModelState.IsValid) 
+                {
+                    var departments = await _departmentService.FindAll();
+                    var viewModel = new SellerFormViewModel(seller, departments);
+                    return View(viewModel);
+                }
+                
+                await _sellerService.CreateSeller(seller);
                 return RedirectToAction(nameof(Index));
             }
             catch
             {
-                return View();
+                return RedirectToAction(nameof(Error), new { 
+                                            message = "Ops... Ocorreu um erro!" 
+                                            });
             }
         }
 
         // GET: SellersController/Edit/5
-        public ActionResult Edit(int id)
+        public async Task<IActionResult> Edit(int? id)
         {
-            var seller = _sellerService.FindSeller(id);
-            return View(seller);
+            if(id == null)
+                return RedirectToAction(nameof(Error), new { 
+                                            message = "Ops... Id not found!" 
+                                            });
+
+            var seller = await _sellerService.FindSeller(id.Value);
+
+            if (seller == null)
+                return RedirectToAction(nameof(Error), new { 
+                                            message = "Ops... Seller not found!" 
+                                            });
+
+            List<Department> departments = await _departmentService.FindAll();
+            SellerFormViewModel viewModel = new SellerFormViewModel(seller, departments);
+            return View(viewModel);
         }
 
         // POST: SellersController/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Edit(Seller seller)
+        public async Task<IActionResult> Edit(Seller seller)
         {
             try
             {
-                _sellerService.UpdateSeller(seller);
+                if(!ModelState.IsValid) 
+                {
+                    var departments = await _departmentService.FindAll();
+                    var viewModel = new SellerFormViewModel(seller, departments);
+                    return View(viewModel);
+                }
+
+                await _sellerService.UpdateSeller(seller);
                 return RedirectToAction(nameof(Index));
             }
             catch
             {
-                return View();
+                return RedirectToAction(nameof(Error), new { 
+                                            message = "Ops... Ocorreu um erro!" 
+                                            });
             }
         }
 
         // GET: SellersController/Delete/5
-        public ActionResult Delete(int? id)
+        public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
             {
-                return NotFound();
+                return RedirectToAction(nameof(Error), new { 
+                                            message = "Ops... Ocorreu um erro!" 
+                                            });
             }
-            var seller = _sellerService.FindSeller(id.Value);
+            var seller = await _sellerService.FindSeller(id.Value);
             return View(seller);
         }
 
         // POST: SellersController/Delete/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Delete(Seller seller)
+        public async Task<IActionResult> Delete(Seller seller)
         {
             try
             {
-                _sellerService.DeleteSeller(seller);
+                await _sellerService.DeleteSeller(seller);
                 return RedirectToAction(nameof(Index));
             }
             catch
             {
-                return View();
+                return RedirectToAction(nameof(Error), new { 
+                                            message = "Ops... Ocorreu um erro!" 
+                                            });
             }
+        }
+
+        public IActionResult Error(string message) {
+            var viewModel = new ErrorViewModel
+            { 
+                Message = message,
+                RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier
+            };
+
+            return View(viewModel);
         }
     }
 }
